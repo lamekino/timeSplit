@@ -1,6 +1,7 @@
 module TimeSplit where
 
 import Data.Char
+import Data.Bifunctor (bimap)
 
 type Title = String
 
@@ -24,17 +25,14 @@ timestampOf [x, y, z] = Just $ Hour x y z
 timestampOf [x, y]    = Just $ Minute x y
 timestampOf _         = Nothing
 
-biTupleMap :: (a -> c) -> (b -> d) -> (a, b) -> (c, d)
-biTupleMap f g (a, b) = (f a, g b)
-
 -- TODO: optimize this (have no clue what the complexity is of this)
 tokenizeInput :: ([String], [String]) -> ([Maybe Timestamp], [Title])
-tokenizeInput = biTupleMap (map tsFromString) (map cleanString)
+tokenizeInput = bimap (map tsFromString) (map cleanString)
   where
     cleanString = dropWhile (not . isAlpha)
     tsFromString = timestampOf . splitTimes
 
-prettyPrint :: ([Maybe Timestamp], [Title]) -> IO ()
+prettyPrint :: (Show a, Show b) => ([a], [b]) -> IO ()
 prettyPrint (x:xs, y:ys) = do
   putStrLn (show x ++ "\t" ++ show y)
   prettyPrint (xs, ys)
