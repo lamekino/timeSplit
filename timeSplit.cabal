@@ -21,7 +21,8 @@ extra-source-files: README.md
 library
   build-depends:
       base >= 4 && < 5
-    , hsndfile
+    , split
+    , process
   hs-source-dirs:
     src
   exposed-modules:
@@ -29,6 +30,7 @@ library
     Types
     Parser
   ghc-options: -Wall
+
 
 executable timesplit
     main-is:          Main.hs
@@ -41,7 +43,6 @@ executable timesplit
     build-depends:
         base ^>=4.14.3.0
       , timeSplit
-      , hsndfile
 
     hs-source-dirs:   app
     ghc-options: -Wall

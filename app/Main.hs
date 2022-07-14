@@ -1,42 +1,38 @@
-import Audio ()
-import Data.Maybe ()
-import Parser as P
-import qualified Sound.File.Sndfile as SND
+import Audio
+import Parser
 import System.Environment (getArgs)
+import Types
 
 help :: String
-help =
-  "timesplit [audiofile] [timestamps]\n\
-  \a program to split an audiofile"
+help = "WIP"
+
+defaultSep :: String
+defaultSep = " - "
 
 -- | Takes the program arguments and gives the path to the audio and the path to
 -- the timestamps
-processArgs :: [String] -> (FilePath, Maybe FilePath)
+processArgs :: [String] -> (FilePath, Maybe FilePath, Timestamp)
 processArgs args =
   case args of
-    [x, y] -> (x, Just y)
-    [x] -> (x, Nothing)
-    [] -> error help
+    [x, y, z] -> (x, Just z, tsFromString y)
+    [x, y] -> (x, Nothing, tsFromString y)
     _ -> error ("Invaild arguements " ++ unlines args)
 
 -- | Takes the possible filepath and returns the parsed version
-parseInput :: Maybe FilePath -> IO P.Parsed
-parseInput fp = P.parse . P.tokenize <$> maybe getContents readFile fp
-
--- pp :: P.Parsed -> IO ()
--- pp (x : xs, y : ys) = do
---   putStrLn (show x ++ "\t" ++ show y)
---   pp (xs, ys)
--- pp _ = return ()
+parseInput ::
+  (FilePath -> IO String) ->
+  IO String ->
+  Maybe FilePath ->
+  IO [Metadata]
+parseInput success _ (Just fp) = parse defaultSep . tokenize <$> success fp
+parseInput _ fallback Nothing = parse defaultSep . tokenize <$> fallback
 
 main :: IO ()
 main = do
-  (audioPath, timePath) <- processArgs <$> getArgs
+  (audioPath, timePath, endTime) <- processArgs <$> getArgs
 
-  parsedTime <- parseInput timePath
+  parsed <- parseInput readFile getContents timePath
 
-  audioHandle <-
-    SND.openFile audioPath SND.ReadMode
-      =<< SND.getFileInfo audioPath
+  splitFile parsed audioPath endTime
 
-  SND.hClose audioHandle
+  return ()
