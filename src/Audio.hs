@@ -2,7 +2,7 @@ module Audio where
 
 import Control.Monad (void)
 import Data.List (zip4)
-import System.Process (runCommand)
+import qualified System.Process as P
 import Types
 
 type Seconds = Int
@@ -22,10 +22,6 @@ fromTimestamp ts =
     (Second x) -> x
     Beginning -> 0
 
--- | Creates output file from a song, given a file extension
-outputFile :: Extension -> Song -> FilePath
-outputFile ext = flip (++) ext . show
-
 -- | Gives the differences of adjacencent timestamps
 timeDifferences :: [Timestamp] -> [Seconds]
 timeDifferences ts = foldr (\(x, y) a -> y - x : a) [] (pair times)
@@ -33,40 +29,75 @@ timeDifferences ts = foldr (\(x, y) a -> y - x : a) [] (pair times)
     pair xs = zip (0 : xs) xs
     times = map fromTimestamp ts
 
--- | Runs FFmpeg, see:
--- https://newbedev.com/using-ffmpeg-to-cut-audio-from-to-position
--- WARN: this uses SOOO much CPU it should honestly crash my computer
--- TODO: use `createProcess` instead, so stdout is hidden
--- TODO: make this native instead of calling external executable
-runFFmpeg :: (InputFile, OutputFile, Int, Int) -> IO ()
-runFFmpeg (input, output, seek, len) =
-  guard $
-    "ffmpeg -c mp3"
-      ++ " -ss "
-      ++ show seek
-      ++ " -i "
-      ++ show input
-      ++ " -to "
-      ++ show len
-      ++ " "
-      ++ show (outputDir ++ output)
+-- | Creates output file from a song, given a file extension
+-- PERF: this runs O(n) whereas the rest of the functions on metadata are O(1)
+outputFile :: Extension -> Song -> FilePath
+outputFile ext = flip (++) ext . show
+
+ffmpegCmd :: (InputFile, OutputFile, Int, Int) -> (FilePath, [String])
+ffmpegCmd (input, output, seek, len) =
+  ( "ffmpeg",
+    [ "-c",
+      "mp3",
+      "-ss",
+      show seek,
+      "-i",
+      input, -- TODO: make this a realpath
+      "-to",
+      show len,
+      outputDir ++ output
+    ]
+  )
   where
-    guard = if not working then putStrLn else void . runCommand
-    working = True -- dummy variable
+    -- TODO: make this user input
     outputDir = "data/out/"
 
--- FIXME: append the ending time to the list of time in timedifferences
+-- | Runs FFmpeg, see:
+-- https://newbedev.com/using-ffmpeg-to-cut-audio-from-to-position
+-- TODO: make this native instead of calling external executable
+runFFmpeg :: (InputFile, OutputFile, Int, Int) -> IO ()
+runFFmpeg = run' . ffmpegCmd
+  where
+    -- Guards for running
+    working :: Bool
+    working = True
+
+    -- Boiler plate for now
+    run' :: (FilePath, [String]) -> IO ()
+    run' xs =
+      if not working
+        then (print . runNothing) xs
+        else void . P.waitForProcess =<< run xs
+
+    -- Makes it so a process runs without outputing to the console
+    silenceOutput :: P.CreateProcess -> P.CreateProcess
+    silenceOutput p =
+      p
+        { P.std_err = P.NoStream -- NOTE: FFmpeg prints to stderr, why idk
+        }
+
+    -- Guard for printing out the resulting process of `run`
+    -- TODO: remove guard to make this the default action of this function
+    runNothing :: (FilePath, [String]) -> P.CreateProcess
+    runNothing = silenceOutput . uncurry P.proc
+
+    run :: (FilePath, [String]) -> IO P.ProcessHandle
+    run args =
+      (\(_, _, _, h) -> h) -- drop everything but the handle
+        <$> (P.createProcess . silenceOutput . uncurry P.proc) args
+
 splitFile :: [Metadata] -> InputFile -> Timestamp -> IO ()
 splitFile ms input endTime =
+  -- PERF: this in total is O(n^4), can be brought to O(n^3) with outputFile optimization
   mapM_ runFFmpeg $
-    zip4
-      (repeat input)
-      (map (outputFile inputExt) songs)
-      (map fromTimestamp times)
-      (timeDifferences times')
+    zip4 -- O(n) (all the lists are the same size)
+      (repeat input) -- O(1)
+      (map (outputFile inputExt) songs) -- O(n^2)...?
+      (map fromTimestamp times) -- O(n)
+      (timeDifferences times') -- O(n)
   where
     times = map fst ms
-    times' = drop 1 times ++ [endTime]
+    times' = drop 1 times ++ [endTime] -- shift the list with the last timestamp
     songs = map snd ms
     -- TODO: make extension match input
     inputExt = ".mp3"
