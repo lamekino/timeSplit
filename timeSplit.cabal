@@ -10,7 +10,7 @@ version:            0.1.0.0
 
 -- A URL where users can report bugs.
 -- bug-reports:
-license:            NONE
+license:            MIT
 author:             lamekino
 
 -- A copyright notice.
