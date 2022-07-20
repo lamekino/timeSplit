@@ -41,8 +41,8 @@ processsArgs arg cmdline =
     _ -> arg
 
 -- | Takes the file contents of timestamps and titles and parses it
-parseWith :: IO String -> IO [Metadata]
-parseWith inp = parse defaultSep . tokenize <$> inp
+parseInput :: String -> IO String -> IO [Metadata]
+parseInput sep inp = parse sep . tokenize <$> inp
 
 main :: IO ()
 main = do
@@ -73,9 +73,10 @@ main = do
 
   -- parse from either stdin or file depending on arguemnts
   parsed <-
-    maybe
-      (parseWith getContents)
-      (parseWith . readFile)
-      (timestampFile args)
+    let parseWith = parseInput songSep
+     in maybe
+          (parseWith getContents)
+          (parseWith . readFile)
+          (timestampFile args)
 
   splitFile parsed audioFile albumEnd
