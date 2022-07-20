@@ -16,11 +16,17 @@ data Arguements = Arguments
   }
   deriving (Eq, Show)
 
-defaultSep :: String
-defaultSep = " - "
-
+-- FIXME: write this
 helpMsg :: String
 helpMsg = "Something useful"
+
+helpExit :: ExitCode -> IO ()
+helpExit code = do
+  print helpMsg
+  exitWith code
+
+defaultSep :: String
+defaultSep = " - "
 
 processsArgs :: Arguements -> [String] -> Arguements
 processsArgs arg cmdline =
@@ -42,6 +48,7 @@ main :: IO ()
 main = do
   args <-
     processsArgs
+      -- default arguements
       Arguments
         { helpFlag = False,
           audioPath = Nothing,
@@ -53,9 +60,8 @@ main = do
       <$> getArgs
 
   -- handle help arguement
-  when (helpFlag args) $ do
-    putStrLn helpMsg
-    exitSuccess
+  when (helpFlag args) $
+    helpExit ExitSuccess
 
   -- required arguments
   let albumEnd = fromMaybe (error "required time") (endingTime args)
@@ -73,5 +79,3 @@ main = do
       (timestampFile args)
 
   splitFile parsed audioFile albumEnd
-
-  return ()
