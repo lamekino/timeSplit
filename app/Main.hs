@@ -1,6 +1,6 @@
 import Audio
 import Control.Monad (when)
-import Data.Maybe (fromJust, fromMaybe, isNothing)
+import Data.Maybe (fromMaybe)
 import Parser
 import System.Environment (getArgs)
 import System.Exit
@@ -16,14 +16,12 @@ data Arguements = Arguments
   }
   deriving (Eq, Show)
 
--- FIXME: write this
-helpMsg :: String
-helpMsg = "Something useful"
-
 helpExit :: ExitCode -> IO ()
-helpExit code = do
-  print helpMsg
-  exitWith code
+helpExit code =
+  let helpMsg =
+        -- FIXME: write this
+        "Something useful"
+   in putStrLn helpMsg >> exitWith code
 
 defaultSep :: String
 defaultSep = " - "
