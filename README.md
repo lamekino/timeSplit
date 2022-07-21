@@ -14,20 +14,20 @@ WIP
 ### Usage
 For reading timestamps/titles from stdin:
 ```sh
-$ timesplit <audio> <end timestamp>
+$ timesplit -i <audio> -l <end timestamp>
 ```
 
 For reading timestamps/titles from a file:
 ```sh
-$ timesplit <audio> <end timestamp> <timestamps.txt>
+$ timesplit -i <audio> -l <end timestamp> -t <timestamps.txt>
 ```
 
 ### Roadmap
 - [x] Timestamp and title parsing.
 - [x] Read audio files.
 - [x] Audio file creation (splitting).
-    - [ ] Job creation.
-- [ ] Command line arguments.
+    - [ ] Multiple process creation.
+- [x] Command line arguments.
 - [ ] Automatic tag creation.
 
 ### Limitations
