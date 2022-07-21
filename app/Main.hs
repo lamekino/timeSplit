@@ -17,11 +17,18 @@ data Arguements = Arguments
   deriving (Eq, Show)
 
 helpExit :: ExitCode -> IO ()
-helpExit code =
-  let helpMsg =
-        -- FIXME: write this
-        "Something useful"
-   in putStrLn helpMsg >> exitWith code
+helpExit code = putStrLn helpMsg >> exitWith code
+  where
+    helpMsg =
+      unlines
+        [ "timesplit usage:",
+          "\t-l <timestamp in HH:MM:SS>  sets the length of the song (required).",
+          "\t-i <audio file>             the audio file to split (required).",
+          "\t-d <dir>                    set the output directory.",
+          "\t-t <txt>                    read a file with the timestamps/titles instead of stdin.",
+          "\t-S <delim>                  sets the separator between artist and song name.",
+          "\t-h                          print this help message and exit."
+        ]
 
 defaultSep :: String
 defaultSep = " - "
@@ -32,9 +39,10 @@ processsArgs arg cmdline =
     ("-h" : _) -> arg {helpFlag = True}
     -- TODO: is there a way to drop 'as' from this?
     -- TODO: make this less repetitive
-    ("-o" : path : as) -> processsArgs arg {outputDirectory = Just path} as
     ("-S" : sep : as) -> processsArgs arg {songSeparator = Just sep} as
-    ("-e" : stamp : as) -> processsArgs arg {endingTime = Just $ tsFromString stamp} as
+    ("-d" : path : as) -> processsArgs arg {outputDirectory = Just path} as
+    ("-i" : path : as) -> processsArgs arg {audioPath = Just path} as
+    ("-l" : stamp : as) -> processsArgs arg {endingTime = Just $ tsFromString stamp} as
     ("-t" : path : as) -> processsArgs arg {timestampFile = Just path} as
     _ -> arg
 
@@ -58,16 +66,18 @@ main = do
       <$> getArgs
 
   -- handle help arguement
+  print args
+
   when (helpFlag args) $
     helpExit ExitSuccess
 
   -- required arguments
   let albumEnd = fromMaybe (error "required time") (endingTime args)
-  let audioFile = fromMaybe (error "required audio file") (audioPath args)
+      audioFile = fromMaybe (error "required audio file") (audioPath args)
 
   -- optional arguemnts
   let outputDir = fromMaybe "." (outputDirectory args)
-  let songSep = fromMaybe defaultSep (songSeparator args)
+      songSep = fromMaybe defaultSep (songSeparator args)
 
   -- parse from either stdin or file depending on arguemnts
   parsed <-
@@ -77,4 +87,6 @@ main = do
           (parseWith . readFile)
           (timestampFile args)
 
-  splitFile parsed audioFile albumEnd
+  return ()
+
+-- splitFile parsed audioFile albumEnd
