@@ -28,10 +28,12 @@ $ timesplit -i <audio> -l <end timestamp> -t <timestamps.txt>
 - [x] Audio file creation (splitting).
     - [ ] Multiple process creation.
 - [x] Command line arguments.
+- [ ] Reversed format support *ie, Song Name - Timestamp*
 - [ ] Automatic tag creation.
 
 ### Limitations
 - Since timestamps on YouTube are precise only to the second, clipping might
   occur when 2 songs aren't completely aligned to the second.
+
 - Currently, it cannot find the total length of a song, so it needs to be
   provided by the user.

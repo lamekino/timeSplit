@@ -7,8 +7,6 @@ import Types
 
 type Seconds = Int
 
-type Extension = String
-
 -- | Convert Timestamp to a raw second value
 fromTimestamp :: Timestamp -> Seconds
 fromTimestamp ts =
@@ -27,9 +25,8 @@ timeDifferences ts = foldr (\(x, y) a -> y - x : a) [] (pair times)
 
 -- | Creates output file from a song, given a file extension
 -- PERF: this runs O(n) whereas the rest of the functions on metadata are O(1)
-outputFile :: Extension -> Song -> FilePath
-outputFile ext = flip (++) ext . show
-
+-- outputFile :: Extension -> Song -> FilePath
+-- outputFile ext = flip (++) ext . show
 ffmpegCmd :: (FilePath, FilePath, Int, Int) -> (FilePath, [String])
 ffmpegCmd (input, output, seek, len) =
   ( "ffmpeg",
@@ -66,11 +63,9 @@ runFFmpeg = run' . ffmpegCmd
         else void . P.waitForProcess =<< run xs
 
     -- Makes it so a process runs without outputing to the console
+    -- NOTE: FFmpeg prints to stderr, why idk
     silenceOutput :: P.CreateProcess -> P.CreateProcess
-    silenceOutput p =
-      p
-        { P.std_err = P.NoStream -- NOTE: FFmpeg prints to stderr, why idk
-        }
+    silenceOutput proc = proc {P.std_err = P.NoStream}
 
     -- Guard for printing out the resulting process of `run`
     -- TODO: remove guard to make this the default action of this function
@@ -82,18 +77,19 @@ runFFmpeg = run' . ffmpegCmd
       (\(_, _, _, h) -> h) -- drop everything but the handle
         <$> (P.createProcess . silenceOutput . uncurry P.proc) args
 
-splitFile :: [Metadata] -> FilePath -> Timestamp -> IO ()
-splitFile ms input endTime =
-  -- PERF: this in total is O(n^4), can be brought to O(n^3) with outputFile optimization
+splitFile :: [Metadata] -> FilePath -> FilePath -> Timestamp -> IO ()
+splitFile ms output input endTime =
   mapM_ runFFmpeg $
-    zip4 -- O(n) (all the lists are the same size)
-      (repeat input) -- O(1)
-      (map (outputFile inputExt) songs) -- O(n^2)...?
-      (map fromTimestamp times) -- O(n)
-      (timeDifferences times') -- O(n)
+    zip4
+      (repeat input)
+      (map (outputFrom output) songs)
+      (map fromTimestamp times)
+      (timeDifferences times')
   where
     times = map fst ms
     times' = drop 1 times ++ [endTime] -- shift the list with the last timestamp
     songs = map snd ms
-    -- TODO: make extension match input
-    inputExt = ".mp3"
+    inputExt = ".mp3" -- TODO: make extension match input, find codec?
+    -- FIXME: this is very lazy
+    outputFrom :: FilePath -> Song -> FilePath
+    outputFrom dir song = dir ++ (flip (++) inputExt . show) song

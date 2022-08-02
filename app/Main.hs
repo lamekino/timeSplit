@@ -2,7 +2,7 @@ import Audio
 import Control.Monad (unless, when)
 import Data.Maybe (fromMaybe)
 import Parser
-import System.Directory
+import System.Directory (doesDirectoryExist, doesFileExist)
 import System.Environment (getArgs)
 import System.Exit
 import System.IO (hPutStr, stderr)
